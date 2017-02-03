@@ -1,0 +1,95 @@
+#This script will be used for managing customer dhcp ipv6 allocations
+
+Script consists of 2 pieces:
+1 - Shell script named : dhcpv6script.sh
+2 - Python code named :  dhcpv6python.py
+
+Below command execution will show you help message :
+ command => ./dhcpv6script.sh -h
+Besides different options in help "./dhcpv6script.sh --restart" can be used to restart DHCP server.
+
+Additionally :
+1 - Every script execution creates a backup directory "backup_dhcpv6_cus" in the same directory as script and copies the file "v6-customers.conf" in it. (A backup is taken before every execution)
+2 - Each execution checks-in the file  "v6-customers.conf" for RCS version control. (RCS should already be installed for that)
+3 - Only one instance of script can be executed at once.
+
+
+Note : Please ensure appropriate permissions for script to execute "/etc/init.d/isc-dhcp-server"
+=========================================================================================================================================
+IMPORTANT  :  Below commands are for one time static configuration.
+=========================================================================================================================================
+Not tested : Please run below command if the path to file "v6-customers.conf" is different from /home/ubuntu/v6-customers.conf or file name is other than v6-customers.conf.
+
+sed -i '3iconfig_file="/home/ubuntu/v6-customers.conf"' dhcpv6script.sh    => replace /home/ubuntu/v6-customers.conf with new path.
+sed -i '15iconfig_file="/home/ubuntu/v6-customers.conf"' dhcpv6python.py   => replace /home/ubuntu/v6-customers.conf with new path.
+=========================================================================================================================================
+Not tested : Please run below command if the path to file "isc-dhcp-server" is different from /etc/init.d/isc-dhcp-server or file name is other than isc-dhcp-server.
+
+sed -i '4idhcp_server="/etc/init.d/isc-dhcp-server restart"' dhcpv6script.sh => replace /etc/init.d/isc-dhcp-server with new path.
+i
+
+=========================================================================================================================================
+EXAMPLE Run of an old version of the script:
+
+PFB output of few tests :
+
+Script help : 
+
+ubuntu@puppet:~$ python devscript.py -h
+Usage: devscript.py --add <customer_name>
+
+Options:
+  --version             show program's version number and exit
+  -h, --help            show this help message and exit
+  -a ADD_PORTID, --add=ADD_PORTID
+                        add a customer port-id
+  -d DEL_PORTID, --del=DEL_PORTID
+                        del a customer port-id
+  -c CUS_NAME, --cus=CUS_NAME
+                        name of customer
+  -l, --list            list all customer port-id
+
+Script list: 
+ubuntu@puppet:~$ python devscript.py -l
+No configuration in the FILE
+
+Script Customer add :
+ubuntu@puppet:~$ python devscript.py -a lag-0:123.0 -c cutomer-0
+Customer name:"cutomer-0" with port-id "lag-0:123.0" added
+ubuntu@puppet:~$ python devscript.py -a lag-1:123.1 -c cutomer-1
+Customer name:"cutomer-1" with port-id "lag-1:123.1" added
+ubuntu@puppet:~$ python devscript.py -a lag-2:123.2 -c cutomer-2
+Customer name:"cutomer-2" with port-id "lag-2:123.2" added
+
+
+Script Customer list:
+ubuntu@puppet:~$ python devscript.py -l
+"lag-1:123.1" ['"cutomer-1"', '2600:8C09:0000:0001:0:1::/124']
+"lag-2:123.2" ['"cutomer-2"', '2600:8C09:0000:0002:0:1::/124']
+"lag-0:123.0" ['"cutomer-0"', '2600:8C09:0000:0000:0:1::/124']
+
+Script Customer del:
+ubuntu@puppet:~$ python devscript.py -d lag-1:123.1
+Customer name:"cutomer-1" with port-id "lag-1:123.1" deleted
+ubuntu@puppet:~$ python devscript.py -d lag-2:123.2
+Customer name:"cutomer-2" with port-id "lag-2:123.2" deleted
+
+Script Customer list:
+ubuntu@puppet:~$ python devscript.py -l
+"lag-0:123.0" ['"cutomer-0"', '2600:8C09:0000:0000:0:1::/124']
+ubuntu@puppet:~$
+
+
+Configuration file :
+ubuntu@puppet:~$ more newfile
+
+class "cutomer-0" {
+   match if v6relay(1, option dhcp6.interface-id) = "lag-0:123.0";
+}
+shared-network production-testing {
+       subnet6 2600:8C09:0000::/48 {
+            pool6 {
+                    range6 2600:8C09:0000:0000:0:1::/124;
+                    allow members of "cutomer-0";
+            }
+ubuntu@puppet:~$
